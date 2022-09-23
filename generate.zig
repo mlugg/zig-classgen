@@ -75,7 +75,7 @@ const Generator = struct {
 
         try self.print("data: _internal.ConcatStructs(&.{{", .{});
         if (class.vtable != .none) {
-            try self.print("extern struct {{ _vt: *Vtable }},", .{});
+            try self.print("extern struct {{ _vt: *const Vtable }},", .{});
         }
         try self.print("_PostVtable,", .{});
         try self.print("}}),", .{});
