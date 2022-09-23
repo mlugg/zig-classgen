@@ -55,7 +55,7 @@ const Generator = struct {
             if (parent == main_parent) continue;
 
             // We add dummy values to indicate the offset that certain base classes appear at
-            try self.print("struct {{ _offset_to_{s}: extern struct {{}} }},", .{parent.name});
+            try self.print("extern struct {{ _offset_to_{s}: extern struct {{}} }},", .{parent.name});
 
             if (parent.is_standard_layout) {
                 try self.print("_internal.PadStruct({s}),", .{parent.name});
@@ -75,7 +75,7 @@ const Generator = struct {
 
         try self.print("data: _internal.ConcatStructs(&.{{", .{});
         if (class.vtable != .none) {
-            try self.print("struct {{ _vt: *_Vtable }},", .{});
+            try self.print("extern struct {{ _vt: *_Vtable }},", .{});
         }
         try self.print("_PostVtable,", .{});
         try self.print("}}),", .{});
