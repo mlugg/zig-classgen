@@ -30,14 +30,14 @@ const Generator = struct {
         const main_parent = switch (class.vtable) {
             .none => null,
             .new => blk: {
-                try self.print("const _Vtable = extern struct {{", .{});
+                try self.print("pub const Vtable = extern struct {{", .{});
                 try self.generateRemainingVtable(class, null);
                 try self.print("}};", .{});
                 break :blk null;
             },
             .inherited => |parent_vt_idx| blk: {
                 const main_parent = class.parents[parent_vt_idx];
-                try self.print("const _Vtable = extern struct {{ _vt_{s}: {s}._Vtable,", .{ main_parent.name, main_parent.name });
+                try self.print("pub const Vtable = extern struct {{ _vt_{s}: {s}.Vtable,", .{ main_parent.name, main_parent.name });
                 try self.generateRemainingVtable(class, main_parent);
                 try self.print("}};", .{});
                 break :blk main_parent;
@@ -75,7 +75,7 @@ const Generator = struct {
 
         try self.print("data: _internal.ConcatStructs(&.{{", .{});
         if (class.vtable != .none) {
-            try self.print("extern struct {{ _vt: *_Vtable }},", .{});
+            try self.print("extern struct {{ _vt: *Vtable }},", .{});
         }
         try self.print("_PostVtable,", .{});
         try self.print("}}),", .{});
