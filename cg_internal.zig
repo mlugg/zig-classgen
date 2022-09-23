@@ -43,16 +43,9 @@ pub fn ConcatStructs(comptime types: []const type) type {
 }
 
 pub fn ClassAsResult(comptime Ptr: type, comptime Child: type, comptime Base: type) type {
-    std.debug.assert(std.meta.trait.isPtrTo(Child)(Ptr));
-    const ptr = @typeInfo(Ptr).Pointer;
-    return @Type(.{ .Pointer = .{
-        .size = .One,
-        .is_const = ptr.is_const,
-        .is_volatile = ptr.is_volatile,
-        .alignment = 0,
-        .address_space = ptr.address_space,
-        .child = Base,
-        .is_allowzero = ptr.is_allowzero,
-        .sentinel = null,
-    } });
+    switch (Ptr) {
+        *Child => return *Base,
+        *const Child => return *const Base,
+        else => @compileError("Expected pointer to class " ++ @typeName(Child)),
+    }
 }
