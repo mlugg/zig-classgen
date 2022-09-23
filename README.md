@@ -104,4 +104,8 @@ only need some methods. However, it's important to note that due to the rules
 around multiple dispatch noted above, you should _always_ include the names, and
 crucially dispatch groups, for any function used in multiple dispatches.
 
+If the class has a virtual destructor, it should be replaced with the special
+directive `DESTRUCTOR`, since destructors are generated differently to normal
+methods on some platforms.
+
 [standard layout type]: https://en.cppreference.com/w/cpp/language/data_members#Standard-layout

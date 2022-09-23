@@ -208,6 +208,7 @@ fn ClassFileParser(comptime Reader: type) type {
             fields,
             vmethods,
             skip: u32,
+            destructor,
             decl: struct { name: []const u8, alt_name: ?[]const u8, ty: ZigType },
             eof,
         };
@@ -267,6 +268,9 @@ fn ClassFileParser(comptime Reader: type) type {
                 return Line{
                     .skip = std.fmt.parseInt(u32, rem, 10) catch return error.BadSkipCount,
                 };
+            } else if (std.mem.eql(u8, directive, "DESTRUCTOR")) {
+                if (rem.len != 0) return error.DestructorTrailingChars;
+                return Line.destructor;
             }
 
             // Not a directive, must be a decl
@@ -457,6 +461,19 @@ fn ClassFileParser(comptime Reader: type) type {
                                 .zig_type = .{ .named = "usize" },
                             });
                         }
+                    },
+
+                    .destructor => {
+                        _ = self.nextLine() catch unreachable;
+
+                        try methods.append(.{
+                            .zig_name = "~",
+                            .dispatch_group = "~",
+                            .args = &.{},
+                            .variadic = false,
+                            .ret = .{ .named = "void" },
+                            .zig_type = .{ .named = "usize" },
+                        });
                     },
 
                     else => break,

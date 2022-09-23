@@ -108,7 +108,11 @@ const Generator = struct {
                     var i: usize = group.items.len;
                     while (i > 0) : (i -= 1) {
                         const method = group.items[i - 1];
-                        try self.print("{s}: {},", .{ method.zig_name, method.zig_type });
+                        if (std.mem.eql(u8, method.zig_name, "~")) {
+                            try self.print("_dtor: usize,", .{});
+                        } else {
+                            try self.print("{s}: {},", .{ method.zig_name, method.zig_type });
+                        }
                     }
                 }
             },
@@ -116,7 +120,11 @@ const Generator = struct {
             .itanium => {
                 for (class.vmethods) |method| {
                     if (main_parent == null or !main_parent.?.hasMainMethod(method)) {
-                        try self.print("{s}: {},", .{ method.zig_name, method.zig_type });
+                        if (std.mem.eql(u8, method.zig_name, "~")) {
+                            try self.print("_dtor: [2]usize,", .{});
+                        } else {
+                            try self.print("{s}: {},", .{ method.zig_name, method.zig_type });
+                        }
                     }
                 }
             },
