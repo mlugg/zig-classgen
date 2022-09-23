@@ -40,7 +40,8 @@ const TypeParser = struct {
     fn parse(self: *TypeParser) !ZigType {
         return switch (self.peek(0).tag) {
             .identifier => self.parseNamedType(),
-            .asterisk, .l_bracket => self.parsePointer(),
+            .l_bracket => self.parseArray(),
+            .asterisk => self.parsePointer(),
             .question_mark => self.parseOptional(),
             .keyword_fn => self.parseFn(),
             else => error.BadToken,
@@ -63,6 +64,29 @@ const TypeParser = struct {
         }
 
         return ZigType{ .named = name.toOwnedSlice() };
+    }
+
+    fn parseArray(self: *TypeParser) !ZigType {
+        if (self.peek(0).tag != .l_bracket) return error.BadToken;
+        if (self.peek(1).tag == .asterisk) return self.parsePointer();
+
+        _ = self.next();
+        const tok = self.next();
+
+        if (tok.tag != .integer_literal) return error.BadToken;
+
+        const len = std.fmt.parseUnsigned(
+            usize,
+            self.toks.buffer[tok.loc.start..tok.loc.end],
+            10,
+        ) catch return error.BadToken;
+
+        if (self.next().tag != .r_bracket) return error.BadToken;
+
+        return ZigType{ .array = .{
+            .len = len,
+            .child = try self.parseAlloc(),
+        } };
     }
 
     fn parsePointer(self: *TypeParser) !ZigType {

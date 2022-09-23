@@ -19,6 +19,10 @@ pub const ZigType = union(enum) {
         is_const: bool,
         child: *ZigType,
     },
+    array: struct {
+        len: usize,
+        child: *ZigType,
+    },
 
     pub fn equals(a: ZigType, b: ZigType) bool {
         if (std.meta.activeTag(a) != std.meta.activeTag(b)) return false;
@@ -61,6 +65,12 @@ pub const ZigType = union(enum) {
                 if (!ptr.child.equals(b.ptr.child.*)) return false;
                 return true;
             },
+
+            .array => |array| {
+                if (array.len != b.array.len) return false;
+                if (!array.child.equals(b.array.child.*)) return false;
+                return true;
+            },
         }
     }
 
@@ -98,6 +108,10 @@ pub const ZigType = union(enum) {
                 }
                 if (ptr.is_const) try writer.writeAll("const ");
                 try writer.print("{}", .{ptr.child.*});
+            },
+
+            .array => |array| {
+                try writer.print("[{}]{}", .{ array.len, array.child.* });
             },
         }
     }
