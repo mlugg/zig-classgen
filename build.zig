@@ -1,10 +1,10 @@
 const std = @import("std");
 const ClassGenerator = @import("generate.zig").ClassGenerator;
 
-pub fn addPackage(b: *std.build.Builder, lib: *std.build.LibExeObjStep, pkg_name: []const u8, dir: []const u8) !void {
+pub fn addPackage(b: *std.build.Builder, lib: *std.build.LibExeObjStep, pkg_name: []const u8, dir: []const u8) void {
     const out_path = b.fmt("{s}/{s}.zig", .{ b.cache_root, pkg_name });
 
-    const step = try b.allocator.create(ClassGenStep);
+    const step = b.allocator.create(ClassGenStep) catch unreachable;
     step.* = .{
         .b = b,
         .step = std.build.Step.init(.custom, b.fmt("ClassGen {s}", .{dir}), b.allocator, ClassGenStep.make),
@@ -26,17 +26,17 @@ pub fn addPackage(b: *std.build.Builder, lib: *std.build.LibExeObjStep, pkg_name
     const rec_pkg: std.build.Pkg = .{
         .name = "cg_rec",
         .source = .{ .path = b.fmt("{s}/extra.zig", .{dir}) },
-        .dependencies = try b.allocator.dupe(std.build.Pkg, &.{.{
+        .dependencies = b.allocator.dupe(std.build.Pkg, &.{.{
             .name = pkg_name,
             .source = .{ .generated = &step.out_file },
             .dependencies = null,
-        }}),
+        }}) catch unreachable,
     };
 
     const pkg: std.build.Pkg = .{
         .name = pkg_name,
         .source = .{ .generated = &step.out_file },
-        .dependencies = try b.allocator.dupe(std.build.Pkg, &.{ internal_pkg, rec_pkg }),
+        .dependencies = b.allocator.dupe(std.build.Pkg, &.{ internal_pkg, rec_pkg }) catch unreachable,
     };
 
     lib.addPackage(pkg);
