@@ -14,7 +14,7 @@ pub fn addPackage(b: *std.build.Builder, lib: *std.build.LibExeObjStep, pkg_name
         .abi = switch (lib.target.getOsTag()) {
             .linux, .macos => .itanium,
             .windows => .msvc,
-            else => return error.UnsupportedOs,
+            else => unreachable,
         },
     };
 
