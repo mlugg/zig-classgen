@@ -18,7 +18,10 @@ try classgen.addPackage(b, exe, "package_name", "class_dir");
 ```
 
 This will read class definitions from files in the directory `class_dir` and
-expose them all to the `exe` step via the package named `package_name`.
+expose them all to the `exe` step via the package named `package_name`. The file
+`extra.zig` is also read from this directory, and all definitions from it are
+included in the exported package. This file may itself import the generated
+class definitions using `@import("package_name")`.
 
 Classgen currently does not provide a method to construct classes - it is only
 for consuming datastructures from elsewhere.
@@ -26,7 +29,7 @@ for consuming datastructures from elsewhere.
 Pointers to classes may be converted to pointers to any of their base classes
 using their `as` method, e.g. `class.as(Base)`. Note that `as` will only convert
 to a direct parent - calls must be chained to move up the class hierarchy.
-Fields of a class can be accessed via `class._data.field_name`. Virtual methods
+Fields of a class can be accessed via `class.data.field_name`. Virtual methods
 are called via `class.methodName(arg1, arg2)`. Inherited or overriden methods
 are not directly included on a class - to call these, you must convert the class
 to the corresponding base type.
@@ -70,8 +73,9 @@ reading `NON_STANDARD_LAYOUT` if the class is not a [standard layout type]. This
 property will be usually be inferred, but there are some conditions which
 prevent a class from being standard layout which classgen will not or cannot
 identify, such as conflicting access controls on fields. Classgen will correctly
-infer non-standard layout when any base class has non-standard layout or when
-the class contains virtual methods.
+infer non-standard layout when any base class has non-standard layout, when the
+class contains virtual methods, and when two or more base classes (or the
+inherited class and a base class) both have fields.
 
 The field definitions consist of a series of `name: type` lines. Note that the
 full Zig type syntax is not currently supported - instead, the subset of named

@@ -14,7 +14,9 @@ const Generator = struct {
         try self.buf.writer().print(fmt, args);
     }
 
-    fn begin(self: *Generator) !void {
+    fn begin(self: *Generator, pkg_name: []const u8) !void {
+        try self.print("pub usingnamespace @import(\"cg_rec\");", .{});
+        try self.print("const {s} = @This();", .{pkg_name});
         try self.print("const _internal = @import(\"cg_internal\");", .{});
         try self.print("const _Method = {s};", .{switch (self.abi) {
             .msvc => "@import(\"std\").builtin.CallingConvention.Thiscall",
@@ -274,17 +276,19 @@ pub const ClassGenerator = struct {
     allocator: std.mem.Allocator,
     raw_classes: std.ArrayList(RawClass),
     abi: Abi,
+    pkg_name: []const u8,
 
     pub const Abi = enum {
         msvc,
         itanium,
     };
 
-    pub fn init(allocator: std.mem.Allocator, abi: Abi) ClassGenerator {
+    pub fn init(allocator: std.mem.Allocator, abi: Abi, pkg_name: []const u8) ClassGenerator {
         return .{
             .allocator = allocator,
             .raw_classes = std.ArrayList(RawClass).init(allocator),
             .abi = abi,
+            .pkg_name = pkg_name,
         };
     }
 
@@ -310,7 +314,7 @@ pub const ClassGenerator = struct {
             .abi = self.abi,
         };
 
-        try generator.begin();
+        try generator.begin(self.pkg_name);
 
         for (classes) |class| {
             try generator.generateClass(class);
