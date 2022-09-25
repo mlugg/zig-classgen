@@ -84,7 +84,6 @@ pub const ZigType = union(enum) {
             .optional => |opt| try writer.print("?{}", .{opt.child}),
 
             .func => |func| {
-                _ = func;
                 try writer.writeAll("fn (");
                 for (func.args) |arg, i| {
                     if (i == func.args.len - 1) {
