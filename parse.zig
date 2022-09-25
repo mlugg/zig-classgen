@@ -73,7 +73,7 @@ const TypeParser = struct {
         _ = self.next();
         const tok = self.next();
 
-        if (tok.tag != .integer_literal) return error.BadToken;
+        if (tok.tag != .number_literal) return error.BadToken;
 
         const len = std.fmt.parseUnsigned(
             usize,
