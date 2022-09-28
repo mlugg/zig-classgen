@@ -1,5 +1,15 @@
 const std = @import("std");
 
+pub const DeclPlatforms = packed struct {
+    windows: bool,
+    linux: bool,
+
+    pub const all: DeclPlatforms = .{
+        .windows = true,
+        .linux = true,
+    };
+};
+
 pub const ZigType = union(enum) {
     named: []const u8,
     optional: struct {
@@ -123,6 +133,7 @@ pub const VirtualMethod = struct {
     variadic: bool,
     ret: ZigType,
     zig_type: ZigType,
+    platforms: DeclPlatforms,
 
     pub fn equals(a: VirtualMethod, b: VirtualMethod) bool {
         if (!std.mem.eql(u8, a.dispatch_group, b.dispatch_group)) return false;
@@ -138,6 +149,7 @@ pub const VirtualMethod = struct {
 pub const Field = struct {
     zig_name: []const u8,
     zig_type: ZigType,
+    platforms: DeclPlatforms,
 };
 
 pub const RawClass = struct {

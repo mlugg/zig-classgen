@@ -4,6 +4,7 @@ const ZigType = @import("common.zig").ZigType;
 const Field = @import("common.zig").Field;
 const VirtualMethod = @import("common.zig").VirtualMethod;
 const RawClass = @import("common.zig").RawClass;
+const DeclPlatforms = @import("common.zig").DeclPlatforms;
 
 const TypeParser = struct {
     const max_peek = 2;
@@ -209,7 +210,12 @@ fn ClassFileParser(comptime Reader: type) type {
             vmethods,
             skip: u32,
             destructor,
-            decl: struct { name: []const u8, alt_name: ?[]const u8, ty: ZigType },
+            decl: struct {
+                platforms: DeclPlatforms,
+                name: []const u8,
+                alt_name: ?[]const u8,
+                ty: ZigType,
+            },
             eof,
         };
 
@@ -275,8 +281,28 @@ fn ClassFileParser(comptime Reader: type) type {
 
             // Not a directive, must be a decl
 
-            const idx = std.mem.indexOfScalar(u8, line, ':') orelse return error.BadLine;
-            const full_name = line[0..idx];
+            var platforms: DeclPlatforms = undefined;
+            var post_platforms: []const u8 = undefined;
+
+            if (line[0] == '@') {
+                const idx = std.mem.indexOfScalar(u8, line, ' ') orelse return error.BadLine;
+                const plats_str = line[1..idx];
+
+                platforms = .{ .windows = false, .linux = false };
+                for (plats_str) |c| switch (c) {
+                    'W' => platforms.windows = true,
+                    'L' => platforms.linux = true,
+                    else => return error.BadLine,
+                };
+
+                post_platforms = line[idx + 1 ..];
+            } else {
+                platforms = DeclPlatforms.all;
+                post_platforms = line;
+            }
+
+            const idx = std.mem.indexOfScalar(u8, post_platforms, ':') orelse return error.BadLine;
+            const full_name = post_platforms[0..idx];
 
             const main_name = std.mem.sliceTo(full_name, '(');
             const alt_name = if (main_name.len == full_name.len) null else blk: {
@@ -289,10 +315,11 @@ fn ClassFileParser(comptime Reader: type) type {
             if (!nameValid(main_name)) return error.InvalidDeclName;
             if (alt_name) |name| if (!nameValid(name)) return error.InvalidDeclName;
 
-            const ty_str = try self.allocator.dupeZ(u8, line[idx + 1 ..]);
+            const ty_str = try self.allocator.dupeZ(u8, post_platforms[idx + 1 ..]);
             const ty = try parseType(self.allocator, ty_str);
 
             return Line{ .decl = .{
+                .platforms = platforms,
                 .name = main_name,
                 .alt_name = alt_name,
                 .ty = ty,
@@ -385,6 +412,7 @@ fn ClassFileParser(comptime Reader: type) type {
                         try fields.append(.{
                             .zig_name = decl.name,
                             .zig_type = decl.ty,
+                            .platforms = decl.platforms,
                         });
                     },
 
@@ -443,6 +471,7 @@ fn ClassFileParser(comptime Reader: type) type {
                             .variadic = decl.ty.func.variadic,
                             .ret = decl.ty.func.ret.*,
                             .zig_type = try self.createMethodType(class_name, decl.ty),
+                            .platforms = decl.platforms,
                         });
                     },
 
@@ -459,6 +488,7 @@ fn ClassFileParser(comptime Reader: type) type {
                                 .variadic = false,
                                 .ret = .{ .named = "void" },
                                 .zig_type = .{ .named = "usize" },
+                                .platforms = DeclPlatforms.all,
                             });
                         }
                     },
@@ -473,6 +503,7 @@ fn ClassFileParser(comptime Reader: type) type {
                             .variadic = false,
                             .ret = .{ .named = "void" },
                             .zig_type = .{ .named = "usize" },
+                            .platforms = DeclPlatforms.all,
                         });
                     },
 

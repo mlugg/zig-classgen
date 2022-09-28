@@ -306,7 +306,9 @@ pub const ClassGenerator = struct {
 
         var br = std.io.bufferedReader(f.reader());
 
-        try self.raw_classes.append(try parseClassFile(self.allocator, br.reader()));
+        var c = try parseClassFile(self.allocator, br.reader());
+        try self.filterPlatform(&c);
+        try self.raw_classes.append(c);
     }
 
     pub fn finish(self: *ClassGenerator) ![]const u8 {
@@ -335,5 +337,31 @@ pub const ClassGenerator = struct {
         std.debug.assert(tree.errors.len == 0);
 
         return tree.render(self.allocator);
+    }
+
+    fn filterPlatform(self: *ClassGenerator, class: *RawClass) !void {
+        var len: usize = class.fields.len;
+        for (class.fields) |field, i| {
+            if (i >= len) break;
+            switch (self.abi) {
+                .msvc => if (field.platforms.windows) continue,
+                .itanium => if (field.platforms.linux) continue,
+            }
+            class.fields[i] = class.fields[len - 1];
+            len -= 1;
+        }
+        class.fields = class.fields[0..len];
+
+        len = class.vmethods.len;
+        for (class.vmethods) |method, i| {
+            if (i >= len) break;
+            switch (self.abi) {
+                .msvc => if (method.platforms.windows) continue,
+                .itanium => if (method.platforms.linux) continue,
+            }
+            class.vmethods[i] = class.vmethods[len - 1];
+            len -= 1;
+        }
+        class.vmethods = class.vmethods[0..len];
     }
 };

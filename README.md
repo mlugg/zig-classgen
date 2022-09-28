@@ -108,4 +108,9 @@ If the class has a virtual destructor, it should be replaced with the special
 directive `DESTRUCTOR`, since destructors are generated differently to normal
 methods on some platforms.
 
+For both fields and virtual methods, a declaration (`name: type` line) may also
+begin with a sequeunce like `@LW` to specify that the declaration only exists on
+certain platforms. For instance, to specify that a declaration only exists on
+Linux, you write `@L name: type`.
+
 [standard layout type]: https://en.cppreference.com/w/cpp/language/data_members#Standard-layout
