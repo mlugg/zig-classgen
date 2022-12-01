@@ -64,7 +64,7 @@ const TypeParser = struct {
             try name.appendSlice(self.toks.buffer[tok.loc.start..tok.loc.end]);
         }
 
-        return ZigType{ .named = name.toOwnedSlice() };
+        return ZigType{ .named = try name.toOwnedSlice() };
     }
 
     fn parseArray(self: *TypeParser) !ZigType {
@@ -171,7 +171,7 @@ const TypeParser = struct {
 
         return ZigType{ .func = .{
             .method = false,
-            .args = args.toOwnedSlice(),
+            .args = try args.toOwnedSlice(),
             .variadic = variadic,
             .ret = try self.parseAlloc(),
         } };
@@ -394,7 +394,7 @@ fn ClassFileParser(comptime Reader: type) type {
 
             return Preamble{
                 .name = class_name,
-                .parents = parents.toOwnedSlice(),
+                .parents = try parents.toOwnedSlice(),
                 .force_non_standard_layout = force_non_standard_layout,
             };
         }
