@@ -149,12 +149,12 @@ const Generator = struct {
             }
 
             try self.print("pub inline fn {s}(self: *{s}", .{ method.zig_name, class.name });
-            for (method.args) |arg, i| {
+            for (method.args, 0..) |arg, i| {
                 try self.print(", arg{}: {}", .{ i, arg });
             }
             try self.print(") {} {{", .{method.ret});
             try self.print("return self.data._vt.{s}(self", .{method.zig_name});
-            for (method.args) |_, i| {
+            for (method.args, 0..) |_, i| {
                 try self.print(", arg{}", .{i});
             }
             try self.print("); }}", .{});
@@ -203,7 +203,7 @@ const ClassConverter = struct {
         const outputs = try allocator.alloc(Class, inputs.len);
         const states = try allocator.alloc(State, inputs.len);
 
-        std.mem.set(State, states, .not_started);
+        @memset(states, .not_started);
 
         return ClassConverter{
             .allocator = allocator,
@@ -214,10 +214,10 @@ const ClassConverter = struct {
     }
 
     fn getConverted(self: ClassConverter, name: []const u8) !*Class {
-        for (self.inputs) |raw, i| {
+        for (self.inputs, 0..) |raw, i| {
             if (std.mem.eql(u8, raw.name, name)) {
                 switch (self.states[i]) {
-                    .not_started => try self.convert(@intCast(u32, i)),
+                    .not_started => try self.convert(@intCast(i)),
                     .in_conversion => return error.RecursiveBaseClass,
                     .done => {},
                 }
@@ -244,9 +244,9 @@ const ClassConverter = struct {
         var first_vtable: ?u32 = null;
         var has_fields: bool = raw.fields.len != 0;
         var parents = try self.allocator.alloc(*Class, raw.parents.len);
-        for (raw.parents) |name, i| {
+        for (raw.parents, 0..) |name, i| {
             parents[i] = try self.getConverted(name);
-            if (parents[i].vtable != .none and first_vtable == null) first_vtable = @intCast(u32, i);
+            if (parents[i].vtable != .none and first_vtable == null) first_vtable = @intCast(i);
             if (!parents[i].is_standard_layout) standard_layout = false; // non-standard-layout base
             if (parents[i].fields.len != 0) {
                 if (!has_fields) {
@@ -270,9 +270,9 @@ const ClassConverter = struct {
     }
 
     fn run(self: ClassConverter) !void {
-        for (self.states) |state, i| {
+        for (self.states, 0..) |state, i| {
             switch (state) {
-                .not_started => try self.convert(@intCast(u32, i)),
+                .not_started => try self.convert(@intCast(i)),
                 .in_conversion => unreachable,
                 .done => {},
             }
@@ -331,7 +331,7 @@ pub const ClassGenerator = struct {
         }
 
         const source = try generator.buf.toOwnedSliceSentinel(0);
-        var tree = try std.zig.parse(self.allocator, source);
+        var tree = try std.zig.Ast.parse(self.allocator, source, .zig);
         defer tree.deinit(self.allocator);
 
         std.debug.assert(tree.errors.len == 0);
@@ -341,7 +341,7 @@ pub const ClassGenerator = struct {
 
     fn filterPlatform(self: *ClassGenerator, class: *RawClass) !void {
         var len: usize = class.fields.len;
-        for (class.fields) |field, i| {
+        for (class.fields, 0..) |field, i| {
             if (i >= len) break;
             switch (self.abi) {
                 .msvc => if (field.platforms.windows) continue,
@@ -353,7 +353,7 @@ pub const ClassGenerator = struct {
         class.fields = class.fields[0..len];
 
         len = class.vmethods.len;
-        for (class.vmethods) |method, i| {
+        for (class.vmethods, 0..) |method, i| {
             if (i >= len) break;
             switch (self.abi) {
                 .msvc => if (method.platforms.windows) continue,

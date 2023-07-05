@@ -49,7 +49,7 @@ pub const ZigType = union(enum) {
             .func => |func| {
                 if (func.method != b.func.method) return false;
                 if (func.variadic != b.func.variadic) return false;
-                for (func.args) |arg, i| {
+                for (func.args, 0..) |arg, i| {
                     if (!arg.equals(b.func.args[i])) return false;
                 }
                 if (!func.ret.equals(b.func.ret.*)) return false;
@@ -95,7 +95,7 @@ pub const ZigType = union(enum) {
 
             .func => |func| {
                 try writer.writeAll("fn (");
-                for (func.args) |arg, i| {
+                for (func.args, 0..) |arg, i| {
                     if (i == func.args.len - 1) {
                         try writer.print("{}", .{arg});
                     } else {
@@ -138,7 +138,7 @@ pub const VirtualMethod = struct {
     pub fn equals(a: VirtualMethod, b: VirtualMethod) bool {
         if (!std.mem.eql(u8, a.dispatch_group, b.dispatch_group)) return false;
         if (a.args.len != b.args.len) return false;
-        for (a.args) |arg, i| {
+        for (a.args, 0..) |arg, i| {
             if (!arg.equals(b.args[i])) return false;
         }
         if (!a.ret.equals(b.ret)) return false;

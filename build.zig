@@ -1,15 +1,20 @@
 const std = @import("std");
 const ClassGenerator = @import("generate.zig").ClassGenerator;
 
-pub fn addPackage(b: *std.build.Builder, lib: *std.build.LibExeObjStep, pkg_name: []const u8, dir: []const u8) void {
-    const out_path = b.fmt("{s}/{s}.zig", .{ b.cache_root, pkg_name });
+pub fn addModule(b: *std.Build, lib: *std.Build.Step.Compile, mod_name: []const u8, dir: []const u8) void {
+    const out_path = b.fmt("{}/{s}.zig", .{ b.cache_root, mod_name });
 
     const step = b.allocator.create(ClassGenStep) catch unreachable;
     step.* = .{
+        .step = std.Build.Step.init(.{
+            .id = .custom,
+            .name = b.fmt("ClassGen {s}", .{dir}),
+            .owner = b,
+            .makeFn = ClassGenStep.make,
+        }),
+        .mod_name = mod_name,
         .b = b,
-        .step = std.build.Step.init(.custom, b.fmt("ClassGen {s}", .{dir}), b.allocator, ClassGenStep.make),
         .dir = dir,
-        .pkg_name = pkg_name,
         .out_file = .{ .step = &step.step, .path = out_path },
         .abi = switch (lib.target.getOsTag()) {
             .linux, .macos => .itanium,
@@ -18,47 +23,45 @@ pub fn addPackage(b: *std.build.Builder, lib: *std.build.LibExeObjStep, pkg_name
         },
     };
 
-    const internal_pkg: std.build.Pkg = .{
-        .name = "cg_internal",
-        .source = .{ .path = comptime thisDir() ++ "/cg_internal.zig" },
-    };
+    const internal_mod = b.createModule(.{
+        .source_file = .{ .path = comptime thisDir() ++ "/cg_internal.zig" },
+    });
 
-    const rec_pkg: std.build.Pkg = .{
-        .name = "cg_rec",
-        .source = .{ .path = b.fmt("{s}/extra.zig", .{dir}) },
-        .dependencies = b.allocator.dupe(std.build.Pkg, &.{.{
-            .name = pkg_name,
-            .source = .{ .generated = &step.out_file },
-            .dependencies = null,
-        }}) catch unreachable,
-    };
+    const rec_mod = b.createModule(.{
+        .source_file = .{ .path = b.fmt("{s}/extra.zig", .{dir}) },
+    });
 
-    const pkg: std.build.Pkg = .{
-        .name = pkg_name,
-        .source = .{ .generated = &step.out_file },
-        .dependencies = b.allocator.dupe(std.build.Pkg, &.{ internal_pkg, rec_pkg }) catch unreachable,
-    };
+    const main_mod = b.createModule(.{
+        .source_file = .{ .generated = &step.out_file },
+        .dependencies = &.{
+            .{ .name = "cg_internal", .module = internal_mod },
+            .{ .name = "cg_rec", .module = rec_mod },
+        },
+    });
 
-    lib.addPackage(pkg);
+    rec_mod.dependencies.put(mod_name, main_mod) catch @panic("OOM");
+
+    lib.addModule(mod_name, main_mod);
 }
 
 const ClassGenStep = struct {
-    b: *std.build.Builder,
-    step: std.build.Step,
+    b: *std.Build,
+    step: std.Build.Step,
     dir: []const u8,
-    pkg_name: []const u8,
-    out_file: std.build.GeneratedFile,
+    mod_name: []const u8,
+    out_file: std.Build.GeneratedFile,
     abi: ClassGenerator.Abi,
 
-    pub fn make(step: *std.build.Step) !void {
+    pub fn make(step: *std.Build.Step, prog_node: *std.Progress.Node) !void {
+        _ = prog_node;
         const self = @fieldParentPtr(ClassGenStep, "step", step);
 
-        var gen = ClassGenerator.init(self.b.allocator, self.abi, self.pkg_name);
+        var gen = ClassGenerator.init(self.b.allocator, self.abi, self.mod_name);
 
         const dir = try std.fs.cwd().openIterableDir(self.dir, .{});
         var it = dir.iterate();
         while (try it.next()) |entry| {
-            if (entry.kind != .File) continue;
+            if (entry.kind != .file) continue;
             if (std.mem.startsWith(u8, entry.name, ".")) continue;
             if (std.mem.endsWith(u8, entry.name, ".zig")) continue;
             try gen.addClassFile(dir.dir, entry.name);

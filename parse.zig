@@ -220,7 +220,7 @@ fn ClassFileParser(comptime Reader: type) type {
         };
 
         fn nameValid(name: []const u8) bool {
-            for (name) |c, i| {
+            for (name, 0..) |c, i| {
                 if (c >= 'a' and c <= 'z') continue;
                 if (c >= 'A' and c <= 'Z') continue;
                 if (c >= '0' and c <= '9' and i > 0) continue;
